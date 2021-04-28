@@ -29,6 +29,16 @@ Write-Output "The Project number is: $prjNum"
 
 # Part 2 - Functions #########################################################
 
+Function Set-NewProjectFixTask {
+    # https://devblogs.microsoft.com/scripting/use-powershell-to-create-scheduled-tasks/
+    Param($projNum)
+
+    $A = New-ScheduledTaskAction -Execute 'Powershell.exe' -Argument "-File C:\Scripts\PermissionFix\PermFix.ps1 $projNum"
+    $T =  New-ScheduledTaskTrigger -Once -At (get-date).AddSeconds(300); $t.EndBoundary = (get-date).AddSeconds(600).ToString('s')
+
+    Register-ScheduledTask -Action $A -Trigger $T -TaskName "PermFix$projNum" -Description "Fix Permission for Project Folder $projNum"
+}
+
 Function Test-CommandExists {
     Param ($command)
     $oldpreference = $ErrorActionPreference
@@ -842,6 +852,9 @@ New-DfsnFolder @NewDFSFolder
 $dfsutilParams = @('property','SD','grant',"\\$Domain\Projects\$prjNum","GULF\${prjAccessGroup}:RX",'protect')
 & dfsutil @dfsutilParams
 dfsutil property sd grant \\$Domain\Projects\$prjNum GULF\AccessControlMaster:RX protect
+
+# Create Scheduled Task to fix permissions if they are broken. It will execute in 5 minutes then delete itself
+Set-NewProjectFixTask $prjNum
 
 # We are done
 
